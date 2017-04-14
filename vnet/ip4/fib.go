@@ -5,6 +5,7 @@
 package ip4
 
 import (
+	"github.com/platinasystems/go/elib"
 	"github.com/platinasystems/go/elib/dep"
 	"github.com/platinasystems/go/elib/parse"
 	"github.com/platinasystems/go/vnet"
@@ -187,8 +188,8 @@ func (f *Fib) addDel(main *Main, p *Prefix, r ip.Adj, isDel bool) (oldAdj ip.Adj
 	// Add/delete in mtrie fib.
 	m := &f.mtrie
 
-	if len(m.plys) == 0 {
-		m.init()
+	if !m.is_initialized() {
+		m.init([]uint8{8, 8, 8, 8})
 	}
 
 	s := addDelLeaf{
@@ -198,14 +199,14 @@ func (f *Fib) addDel(main *Main, p *Prefix, r ip.Adj, isDel bool) (oldAdj ip.Adj
 	}
 	if isDel {
 		if p.Len == 0 {
-			m.defaultLeaf = emptyLeaf
+			m.default_leaf = empty_leaf
 		} else {
 			s.unset(m)
 			f.setLessSpecific(&p.Address)
 		}
 	} else {
 		if p.Len == 0 {
-			m.defaultLeaf = setResult(s.result)
+			m.default_leaf = setResult(s.result)
 		} else {
 			s.set(m)
 		}
@@ -281,7 +282,8 @@ func (f *Fib) Get(p *Prefix) (a ip.Adj, ok bool) {
 func (f *Fib) Add(m *Main, p *Prefix, r ip.Adj) (ip.Adj, bool) { return f.addDel(m, p, r, true) }
 func (f *Fib) Del(m *Main, p *Prefix) (ip.Adj, bool)           { return f.addDel(m, p, ip.AdjMiss, false) }
 func (f *Fib) Lookup(a *Address) (r ip.Adj) {
-	r = f.mtrie.lookup(a)
+	b := elib.Bitmap(a[0] | a[1]<<8 | a[2]<<16 | a[3]<<24)
+	r = f.mtrie.lookup(b)
 	return
 }
 
